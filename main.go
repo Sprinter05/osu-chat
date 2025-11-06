@@ -17,12 +17,19 @@ func main() {
 			IdleConnTimeout:   30 * time.Second,
 		},
 		Timeout: time.Minute,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			print(req, via)
+			return nil
+		},
 	}
 
-	list, err := api.GetChannelList(client, config.OAuth)
+	token, err := api.RequestToken(client, config.OAuth)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	print(list)
+	err = api.DeleteToken(client, token)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

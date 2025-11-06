@@ -5,13 +5,18 @@ import (
 	"net/http"
 )
 
-func GetChannelList(cl *http.Client, oauth OAuth) ([]ChatChannel, error) {
-	req, err := http.NewRequest("GET", OSU_URL+"/chat/channels", nil)
+func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
+	req, err := http.NewRequest(
+		http.MethodGet,
+		OSU_URL+"/chat/channels",
+		nil,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	setGenericHeaders(&req.Header, oauth)
+	setGenericHeaders(&req.Header, token)
 
 	res, err := cl.Do(req)
 	if err != nil {
