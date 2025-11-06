@@ -51,7 +51,7 @@ type User struct {
 	Username      string    `json:"username"`
 
 	// Optional fields (only necessary ones)
-	IsRestricted    *bool `json:"is_restricted,omitempty"`
+	IsRestricted    *bool `json:"Pis_restricted,omitempty"`
 	SessionVerified *bool `json:"session_verified,omitempty"`
 	UnreadPMCount   *int  `json:"unread_pm_count,omitempty"`
 }

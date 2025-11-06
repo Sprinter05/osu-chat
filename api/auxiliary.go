@@ -1,10 +1,17 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 )
+
+// Errors
+
+func httpErr(res *http.Response) error {
+	return errors.New(res.Status)
+}
 
 // Time according to ISO 8601
 

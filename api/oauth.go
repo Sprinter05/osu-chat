@@ -75,7 +75,7 @@ func oauthAuthorize(oauth OAuth) (string, error) {
 	url.Add("scope", SCOPES_OAUTH)
 	params := url.Encode()
 
-	full := fmt.Sprintf("https://%s/authorize?%s", OSU_URL_OAUTH, params)
+	full := fmt.Sprintf("%s/authorize?%s", OSU_URL_OAUTH, params)
 
 	channel := make(chan string)
 	go oauthServer(state, channel)
