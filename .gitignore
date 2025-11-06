@@ -1,5 +1,6 @@
 # Folders
 build/
+config/*
 
 # File types
 **/__debug_bin*
