@@ -56,6 +56,11 @@ type User struct {
 	UnreadPMCount   *int  `json:"unread_pm_count,omitempty"`
 }
 
+type UserSilence struct {
+	Id     int    `json:"id"`
+	UserId UserId `json:"user_id"`
+}
+
 type ChatChannelUserAttributes struct {
 	CanMessage      bool      `json:"can_message"`
 	CanMessageError string    `json:"can_message_error"`
