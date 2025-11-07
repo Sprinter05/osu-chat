@@ -5,13 +5,28 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch App",
+            "name": "Launch Client",
             "type": "go",
             "request": "launch",
             "mode": "debug",
+            "args": [
+                "--config",
+                "config/config.json"
+            ],
             "program": "${workspaceFolder}",
             "cwd": "${workspaceFolder}",
-            "console": "externalTerminal"
+        },
+        {
+            "name": "Launch OAuth Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "args": [
+                "--config",
+                "config/oauth.json"
+            ],
+            "program": "${workspaceFolder}/oauth",
+            "cwd": "${workspaceFolder}",
         }
     ]
 }
