@@ -4,10 +4,9 @@ import (
 	"flag"
 	"log"
 
-	"github.com/Sprinter05/osu-chat/api"
-	"github.com/Sprinter05/osu-chat/api/wrappers"
 	"github.com/Sprinter05/osu-chat/internal"
 	"github.com/Sprinter05/osu-chat/internal/conf"
+	"github.com/Sprinter05/osu-chat/ui"
 )
 
 /* SETUP */
@@ -30,14 +29,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	token, err := wrappers.Login(client, configFile, config)
-	if err != nil {
-		log.Fatal(err)
+	gui := ui.GUI{
+		Client: client,
 	}
 
-	list, err := api.GetChannelList(client, token)
-	if err != nil {
-		log.Fatal(err)
-	}
-	print(list)
+	gui.Run()
 }
