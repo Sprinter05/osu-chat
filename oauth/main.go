@@ -16,8 +16,7 @@ type Config struct {
 	Address     string `json:"address"`
 }
 
-// Ran at startup
-func init() {
+func setup() {
 	flag.StringVar(
 		&configFile, "config", "oauth.json",
 		"Configuration file to load, must be in JSON format.",
@@ -26,6 +25,7 @@ func init() {
 }
 
 func main() {
+	setup()
 	conf := new(Config)
 	err := internal.GetConfig(configFile, conf)
 	if err != nil {

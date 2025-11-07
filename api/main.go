@@ -21,6 +21,11 @@ func RetrieveToken(params OAuth) (oauth.Token, error) {
 		return oauth.Token{}, err
 	}
 
+	ret, _ := oauth.GetPortFromState(state)
+	if ret != port {
+		panic("invalid")
+	}
+
 	url := url.Values{}
 	url.Add("client_id", strconv.FormatInt(int64(params.ClientId), 10))
 	url.Add("state", state)

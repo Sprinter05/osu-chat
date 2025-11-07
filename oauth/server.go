@@ -16,8 +16,11 @@ import (
 	"github.com/Sprinter05/osu-chat/internal"
 )
 
-const OAUTH_STATE_LENGTH int = 128
-const OAUTH_PORT_LENGTH int = 5
+const OauthStateLength int = 128
+const OauthPortLength int = 5
+
+const MinPort int = 2<<9 + 1
+const MaxPort int = 2<<15 - 1
 
 type OAuth struct {
 	ClientId    int    `json:"client_id"`
@@ -30,13 +33,13 @@ type OAuth struct {
 // It is given in base64 format
 func CreateState() (uint16, string, error) {
 	// Create random port excluding well known ports
-	port := mrand.IntN((2 ^ 16) - ((2 ^ 10) + 1))
+	port := mrand.IntN(MaxPort-MinPort) + MinPort
 	portStr := fmt.Sprintf("%05d", port)
 
 	// Add random data
-	data := make([]byte, 0, OAUTH_STATE_LENGTH)
-	max := OAUTH_STATE_LENGTH - OAUTH_PORT_LENGTH
-	if _, err := io.ReadAtLeast(rand.Reader, data, max); err != nil {
+	random := OauthStateLength - OauthPortLength
+	data := make([]byte, random)
+	if _, err := io.ReadFull(rand.Reader, data); err != nil {
 		return 0, "", err
 	}
 
@@ -54,8 +57,8 @@ func GetPortFromState(state string) (uint16, error) {
 	}
 
 	// Get port at the end
-	max := OAUTH_STATE_LENGTH - OAUTH_PORT_LENGTH
-	portRange := base[max:]
+	nonRand := OauthStateLength - OauthPortLength
+	portRange := base[nonRand:]
 	port, err := strconv.ParseUint(string(portRange), 10, 16)
 	if err != nil {
 		return 0, err

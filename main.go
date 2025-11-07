@@ -18,6 +18,7 @@ func init() {
 		&configFile, "config", "config.json",
 		"Configuration file to load, must be in JSON format.",
 	)
+	flag.Parse()
 }
 
 func login(config *Config) (api.Token, error) {
