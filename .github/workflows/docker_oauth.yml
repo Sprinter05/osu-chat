@@ -27,7 +27,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: .
-        file: {context}/callback/Dockerfile
+        file: '${{ context }}/callback/Dockerfile'
         push: true
         platforms: linux/amd64
         tags: ghcr.io/sprinter05/osu-chat-oauthd
