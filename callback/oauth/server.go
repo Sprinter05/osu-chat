@@ -116,6 +116,23 @@ func clientRequest(response TokenResponse) (*http.Request, error) {
 
 type serverFunc func(w http.ResponseWriter, r *http.Request)
 
+// Auxiliary method to log an error on the petition
+func logError(endpoint string, r *http.Request, err error) {
+	log.Printf(
+		"[X] Error on %s endpoint from %s: %s\n",
+		endpoint, r.RemoteAddr, err.Error(),
+	)
+}
+
+// Auxiliary method to log a successful operation.
+// It doesn't print the entire state string
+func logSuccess(endpoint string, r *http.Request, state string) {
+	log.Printf(
+		"[i] Successful operation performed on %s endpoint from %s with state %s...\n",
+		endpoint, r.RemoteAddr, state[:32],
+	)
+}
+
 // HTTP method for the "/authorization" endpoint. The API must redirect
 // to this endpoint, which will retrieve the token and then send it back
 // to the native application through another redirect
@@ -123,6 +140,7 @@ func authorization(client *http.Client, config Config) serverFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query()
 		if !url.Has("code") || !url.Has("state") {
+			logError("authorization", r, fmt.Errorf("no code or state provided"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -132,6 +150,7 @@ func authorization(client *http.Client, config Config) serverFunc {
 
 		token, err := requestToken(client, config, code)
 		if err != nil {
+			logError("authorization", r, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -142,42 +161,48 @@ func authorization(client *http.Client, config Config) serverFunc {
 			State: state,
 		})
 		if err != nil {
+			logError("authorization", r, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		http.Redirect(w, req, req.URL.String(), http.StatusPermanentRedirect)
+		logSuccess("authorization", r, state)
 	}
 }
 
 // HTTP method for the "/refresh" endpoint. The client app sends a POST request
 // giving the refresh token and the scopes, which will then be used to refresh
 // the token, returning the API response back to the client app
-func refreshing(client *http.Client, config Config) serverFunc {
+func refresh(client *http.Client, config Config) serverFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query()
 		if !url.Has("refresh") || !url.Has("scopes") {
+			logError("refresh", r, fmt.Errorf("no refresh or scopes provided"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		refresh := url.Get("refresh")
-		scopes := strings.Split(url.Get("scopes"), "+")
+		scopes := strings.Split(url.Get("scopes"), " ")
 
 		response, err := refreshToken(client, config, refresh, scopes)
 		if err != nil {
+			logError("refresh", r, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		buf, err := io.ReadAll(response.Body)
 		if err != nil {
+			logError("refresh", r, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		// Send token back to client
 		w.Write(buf)
+		logSuccess("refresh", r, refresh)
 	}
 }
 
@@ -189,17 +214,17 @@ func ServerCallback(config Config) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/authorization", authorization(cl, config))
-	mux.HandleFunc("/refresh", refreshing(cl, config))
+	mux.HandleFunc("/refresh", refresh(cl, config))
 
 	srv := &http.Server{
 		Addr:    config.Address,
 		Handler: mux,
 	}
 
-	fmt.Print("Started OAuth Server\n")
+	fmt.Printf("Started OAuth Intermediate Server on %s\n", config.Address)
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
-		log.Fatalf("OAuth server callback error: %s", err)
+		log.Fatalf("OAuth intermediate server callback error: %s", err)
 	}
 }
 
@@ -232,8 +257,8 @@ func ClientCallback(state string, port uint16, send chan<- Token) {
 			return
 		}
 
-		response := new(TokenResponse)
-		err = json.NewDecoder(bytes.NewBuffer(jsonRaw)).Decode(response)
+		var response TokenResponse
+		err = json.NewDecoder(bytes.NewBuffer(jsonRaw)).Decode(&response)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return

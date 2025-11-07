@@ -10,6 +10,7 @@ import (
 	"github.com/Sprinter05/osu-chat/internal"
 )
 
+// Token struct for the token returned by petitions to the API
 type Token struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`

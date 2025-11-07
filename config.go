@@ -6,6 +6,7 @@ import (
 	"github.com/Sprinter05/osu-chat/api"
 )
 
+// Token type to be stored in the configuration
 type Token struct {
 	TokenType      string    `json:"token_type"`
 	AccessToken    string    `json:"access_token"`
@@ -20,7 +21,7 @@ type Config struct {
 
 // Removes the duration on the token to be used
 // in API requests
-func configToToken(token Token) api.Token {
+func configToAPIToken(token Token) api.Token {
 	return api.Token{
 		TokenType:    token.TokenType,
 		AccessToken:  token.AccessToken,

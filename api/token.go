@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -36,7 +39,7 @@ func RetrieveToken(params OAuth) (tok oauth.Token, err error) {
 	url.Add("client_id", strconv.FormatInt(int64(params.ClientId), 10))
 	url.Add("state", state)
 	url.Add("response_type", "code")
-	url.Add("redirect_uri", params.CallbackURL)
+	url.Add("redirect_uri", params.CallbackURL+"/authorization")
 	url.Add("scope", strings.Join(params.Scopes, " "))
 	full := url.Encode()
 
@@ -52,4 +55,44 @@ func RetrieveToken(params OAuth) (tok oauth.Token, err error) {
 	token := <-channel
 
 	return token, nil
+}
+
+func RefreshToken(cl *http.Client, params OAuth, old Token) (tok oauth.Token, err error) {
+	values := map[string]string{
+		"refresh": old.RefreshToken,
+		"scopes":  strings.Join(params.Scopes, " "),
+	}
+
+	body, err := json.Marshal(values)
+	if err != nil {
+		return tok, err
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		params.CallbackURL+"/refresh",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return tok, err
+	}
+
+	internal.SetContentHeaders(&req.Header)
+
+	res, err := cl.Do(req)
+	if err != nil {
+		return tok, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return tok, internal.HTTPError(res)
+	}
+
+	var token oauth.Token
+	err = json.NewDecoder(res.Body).Decode(&token)
+	if err != nil {
+		return tok, err
+	}
+
+	return token, err
 }

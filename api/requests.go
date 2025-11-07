@@ -14,6 +14,7 @@ type OAuth struct {
 	Scopes      []string `json:"scopes"`
 }
 
+// Token type to be used in petitions to the API
 type Token struct {
 	TokenType    string
 	AccessToken  string
