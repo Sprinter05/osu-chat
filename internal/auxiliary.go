@@ -13,6 +13,8 @@ import (
 
 /* ERROR HANDLING */
 
+// Returns an HTTP error as a go error
+// with more information if available
 func HTTPError(res *http.Response) error {
 	msg, _ := io.ReadAll(res.Body)
 	if len(msg) != 0 {
@@ -32,36 +34,44 @@ func HTTPError(res *http.Response) error {
 	return errors.New(res.Status)
 }
 
-/* TIME FORMATING ACCORDING TO ISO 8601 */
+/* TIME FORMATING */
 
-const TIME_FORMAT string = "2006-01-02T15:04:05Z0700"
+// Format according to ISO 8601
+const TimeFormat string = "2006-01-02T15:04:05Z0700"
 
 func ParseTime(s string) (time.Time, error) {
-	return time.Parse(TIME_FORMAT, s)
+	return time.Parse(TimeFormat, s)
 }
 
 func FormatTime(t time.Time) string {
-	return t.Format(TIME_FORMAT)
+	return t.Format(TimeFormat)
 }
 
 /* HTTP  */
 
+// Check if a port is in use by dialing that port in localhost
+// and checking if an answer is received
 func CheckPortInUse(port uint16) bool {
 	portStr := strconv.FormatInt(int64(port), 10)
 	address := net.JoinHostPort("localhost", portStr)
 	conn, err := net.DialTimeout("tcp4", address, time.Second)
 	if err != nil {
+		// Port has nothing running on it
 		return true
 	}
 
 	if conn == nil {
+		// Connection is null meaning it doesn't exist
 		return true
 	}
 
+	// We close the connection if it was obtained
+	// and return that a connection was found (not available)
 	conn.Close()
 	return false
 }
 
+// Returns a default http client for requests
 func DefaultClient() *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
@@ -73,6 +83,7 @@ func DefaultClient() *http.Client {
 	}
 }
 
+// Sets the headers to accept and send "application/json"
 func SetContentHeaders(hd *http.Header) {
 	hd.Add("Accept", "application/json")
 	hd.Add("Content-Type", "application/json")

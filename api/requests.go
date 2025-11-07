@@ -20,11 +20,11 @@ type Token struct {
 	RefreshToken string
 }
 
-// Authentication
+/* AUXILIARY FUNCTIONS */
 
+// Sets the generic headers needed for an API request
 func setGenericHeaders(hd *http.Header, token Token) {
-	hd.Set("Content-Type", "application/json")
-	hd.Set("Accept", "application/json")
+	internal.SetContentHeaders(hd)
 	hd.Set("Authorization", fmt.Sprintf(
 		"%s %s",
 		token.TokenType,
@@ -32,13 +32,15 @@ func setGenericHeaders(hd *http.Header, token Token) {
 	))
 }
 
-func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
+// Base function to do a request to the osu API without a body
+//
+// method: HTTP method,
+// endpoint: URL route after the base address (e.g "/a/b"),
+// expected: HTTP code that should be returned by the request
+func makeRequestNoBody(cl *http.Client, method string, endpoint string, expected int, token Token) (*http.Response, error) {
 	req, err := http.NewRequest(
-		http.MethodGet,
-		OsuApiUrl+"/chat/channels",
-		nil,
+		method, OsuApiUrl+endpoint, nil,
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +52,24 @@ func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode != expected {
 		return nil, internal.HTTPError(res)
+	}
+
+	return res, nil
+}
+
+/* API REQUESTS */
+
+// Gets the list of all public chat channels
+func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
+	res, err := makeRequestNoBody(
+		cl, http.MethodGet,
+		"/chat/channels",
+		http.StatusOK, token,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	list := make([]ChatChannel, 0)
@@ -61,4 +79,15 @@ func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
 	}
 
 	return list, nil
+}
+
+// Removes an existing token that is currently available
+func DeleteToken(cl *http.Client, token Token) error {
+	_, err := makeRequestNoBody(
+		cl, http.MethodDelete,
+		"/oauth/tokens/current",
+		http.StatusNoContent, token,
+	)
+
+	return err
 }

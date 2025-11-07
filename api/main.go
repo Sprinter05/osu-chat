@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,10 +14,14 @@ import (
 const OsuApiUrl string = "https://osu.ppy.sh/api/v2"
 const OsuOauthUrl string = "https://osu.ppy.sh/oauth/authorize"
 
+// Retrieve a token by authorizing the OAuth application and following
+// the authorization flow through the intermadiate OAuth server and back
+// to the client application
 func RetrieveToken(params OAuth) (tok oauth.Token, err error) {
 	var port uint16
 	var state string
 
+	// Make sure the randomly obtained port is not in use already
 	available := false
 	for !available {
 		port, state, err = oauth.CreateState()
@@ -39,36 +42,14 @@ func RetrieveToken(params OAuth) (tok oauth.Token, err error) {
 
 	osuUrl := fmt.Sprintf("%s?%s", OsuOauthUrl, full)
 
+	// Run the client loopback server concurrently
 	channel := make(chan oauth.Token)
 	go oauth.ClientCallback(state, port, channel)
 
+	// Open the authorization in the browser and wait until
+	// the token is forwarder back to the client
 	browser.OpenURL(osuUrl)
 	token := <-channel
 
 	return token, nil
-}
-
-func DeleteToken(cl *http.Client, token Token) error {
-	req, err := http.NewRequest(
-		http.MethodDelete,
-		OsuApiUrl+"/oauth/tokens/current",
-		nil,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	setGenericHeaders(&req.Header, token)
-
-	res, err := cl.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != http.StatusNoContent {
-		return internal.HTTPError(res)
-	}
-
-	return nil
 }

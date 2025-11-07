@@ -17,6 +17,7 @@ type Token struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// Request a token to the API based on the standard OAuth 2.0 specification
 func requestToken(cl *http.Client, config Config, code string) (Token, error) {
 	values := map[string]string{
 		"client_id":     strconv.FormatInt(int64(config.OAuth.ClientId), 10),
@@ -26,7 +27,6 @@ func requestToken(cl *http.Client, config Config, code string) (Token, error) {
 		"redirect_uri":  config.CallbackURL,
 	}
 
-	// Parse POST body as json
 	body, err := json.Marshal(values)
 	if err != nil {
 		return Token{}, err
@@ -61,7 +61,9 @@ func requestToken(cl *http.Client, config Config, code string) (Token, error) {
 	return token, nil
 }
 
-func refreshToken(cl *http.Client, config Config, refresh string, scopes []string) (Token, error) {
+// Refresh an existing token against the API server and return the whole response
+// from the API, with the intention of forwarding it back to the client application
+func refreshToken(cl *http.Client, config Config, refresh string, scopes []string) (*http.Response, error) {
 	values := map[string]string{
 		"client_id":     strconv.FormatInt(int64(config.OAuth.ClientId), 10),
 		"client_secret": config.OAuth.TokenSecret,
@@ -70,10 +72,9 @@ func refreshToken(cl *http.Client, config Config, refresh string, scopes []strin
 		"scope":         strings.Join(scopes, " "),
 	}
 
-	// Parse POST body as json
 	body, err := json.Marshal(values)
 	if err != nil {
-		return Token{}, err
+		return nil, err
 	}
 
 	req, err := http.NewRequest(
@@ -82,25 +83,20 @@ func refreshToken(cl *http.Client, config Config, refresh string, scopes []strin
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
-		return Token{}, err
+		return nil, err
 	}
 
 	internal.SetContentHeaders(&req.Header)
 
 	res, err := cl.Do(req)
 	if err != nil {
-		return Token{}, err
+		return nil, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return Token{}, internal.HTTPError(res)
+		return nil, internal.HTTPError(res)
 	}
 
-	var token Token
-	err = json.NewDecoder(res.Body).Decode(&token)
-	if err != nil {
-		return Token{}, err
-	}
-
-	return token, nil
+	// Forward response back to the calling function
+	return res, nil
 }

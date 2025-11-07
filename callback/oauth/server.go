@@ -36,8 +36,8 @@ type Config struct {
 
 /* STATE */
 
-// Creates a random state string with the port bundled in it
-// It is given in base64 format
+// Creates a random state string with the port at the end of
+// the string, given in base64 format
 func CreateState() (uint16, string, error) {
 	// Create random port excluding well known ports
 	port := mrand.IntN(MaxPort-MinPort) + MinPort
@@ -55,7 +55,8 @@ func CreateState() (uint16, string, error) {
 	return uint16(port), base64.StdEncoding.EncodeToString(data), nil
 }
 
-// Returns the port asocciated to a random state string
+// Returns the port asocciated to a random state string that
+// must be in base64 format
 func GetPortFromState(state string) (uint16, error) {
 	// Decode base64
 	base, err := base64.StdEncoding.DecodeString(state)
@@ -63,7 +64,7 @@ func GetPortFromState(state string) (uint16, error) {
 		return 0, err
 	}
 
-	// Get port at the end
+	// Get port at the end of the string
 	nonRand := OauthStateLength - OauthPortLength
 	portRange := base[nonRand:]
 	port, err := strconv.ParseUint(string(portRange), 10, 16)
@@ -81,24 +82,22 @@ type TokenResponse struct {
 	State string `json:"state"`
 }
 
+// Redirects the token back to the native application, running an http server
+// on an ephemeral port. Only used for authorization
 func clientRequest(response TokenResponse) (*http.Request, error) {
 	port, err := GetPortFromState(response.State)
 	if err != nil {
 		return nil, err
 	}
 
+	// We encode the token in JSON
 	body := make([]byte, 0)
-	if response.State == "" {
-		body, err = json.Marshal(response.Token)
-	} else {
-		body, err = json.Marshal(response)
-	}
+	body, err = json.Marshal(response)
 	if err != nil {
 		return nil, err
 	}
 
 	jsonVal := base64.StdEncoding.EncodeToString(body)
-
 	req, err := http.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("http://localhost:%d/token?json=%s", port, jsonVal),
@@ -117,6 +116,9 @@ func clientRequest(response TokenResponse) (*http.Request, error) {
 
 type serverFunc func(w http.ResponseWriter, r *http.Request)
 
+// HTTP method for the "/authorization" endpoint. The API must redirect
+// to this endpoint, which will retrieve the token and then send it back
+// to the native application through another redirect
 func authorization(client *http.Client, config Config) serverFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query()
@@ -134,6 +136,7 @@ func authorization(client *http.Client, config Config) serverFunc {
 			return
 		}
 
+		// Send token back to the client application
 		req, err := clientRequest(TokenResponse{
 			Token: token,
 			State: state,
@@ -147,6 +150,9 @@ func authorization(client *http.Client, config Config) serverFunc {
 	}
 }
 
+// HTTP method for the "/refresh" endpoint. The client app sends a POST request
+// giving the refresh token and the scopes, which will then be used to refresh
+// the token, returning the API response back to the client app
 func refreshing(client *http.Client, config Config) serverFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query()
@@ -158,31 +164,32 @@ func refreshing(client *http.Client, config Config) serverFunc {
 		refresh := url.Get("refresh")
 		scopes := strings.Split(url.Get("scopes"), "+")
 
-		token, err := refreshToken(client, config, refresh, scopes)
+		response, err := refreshToken(client, config, refresh, scopes)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		req, err := clientRequest(TokenResponse{
-			Token: token,
-			State: "",
-		})
+		buf, err := io.ReadAll(response.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		http.Redirect(w, req, req.URL.String(), http.StatusPermanentRedirect)
+		// Send token back to client
+		w.Write(buf)
 	}
 }
 
+// Function to be ran by the OAuth intermediate server to start
+// listening for petitions. The only way to close the HTTP server
+// is by closing the running routine
 func ServerCallback(config Config) {
 	cl := internal.DefaultClient()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/authorization", authorization(cl, config))
-	mux.HandleFunc("/refreshing", refreshing(cl, config))
+	mux.HandleFunc("/refresh", refreshing(cl, config))
 
 	srv := &http.Server{
 		Addr:    config.Address,
@@ -198,7 +205,9 @@ func ServerCallback(config Config) {
 
 /* CLIENT */
 
-// Ran by the client application
+// Function to be ran by the native client app to wait for the OAuth
+// intermadiate server to redirect here. It will close once
+// the operation has been performed
 func ClientCallback(state string, port uint16, send chan<- Token) {
 	mux := http.NewServeMux()
 	srv := &http.Server{
@@ -207,7 +216,7 @@ func ClientCallback(state string, port uint16, send chan<- Token) {
 	}
 
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: close server according to GUI
+		// TODO: close server according to GUI to show html message
 		defer srv.Close()
 
 		url := r.URL.Query()
@@ -230,6 +239,7 @@ func ClientCallback(state string, port uint16, send chan<- Token) {
 			return
 		}
 
+		// Verify againsy cross-forgery
 		if state != response.State {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -239,6 +249,7 @@ func ClientCallback(state string, port uint16, send chan<- Token) {
 		fmt.Fprint(w, "Token generated! You can now close this window!")
 	})
 
+	// Wait until the token has been obtained
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
 		log.Fatalf("OAuth client callback error: %s", err)

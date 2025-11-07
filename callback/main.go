@@ -11,7 +11,7 @@ import (
 
 var configFile string
 
-func setup() {
+func init() {
 	flag.StringVar(
 		&configFile, "config", "oauth.json",
 		"Configuration file to load, must be in JSON format.",
@@ -20,7 +20,6 @@ func setup() {
 }
 
 func main() {
-	setup()
 	conf := new(oauth.Config)
 	err := internal.GetConfig(configFile, conf)
 	if err != nil {
