@@ -1,7 +1,7 @@
 services:
   oauthd:
     image: oauthd-osu
-    container_name: osu-chat-oauthd
+    container_name: ghcr.io/sprinter05/osu-chat-oauthd:latest
     ports:
       - "8000:8000/tcp"
     volumes:

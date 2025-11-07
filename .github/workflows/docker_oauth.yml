@@ -1,4 +1,4 @@
-name: osu-chat oauthd
+name: osu-chat-oauthd
 
 on:
   push:
@@ -30,4 +30,4 @@ jobs:
         file: './callback/Dockerfile'
         push: true
         platforms: linux/amd64
-        tags: ghcr.io/sprinter05/osu-chat-oauthd
+        tags: ghcr.io/sprinter05/osu-chat-oauthd:latest
