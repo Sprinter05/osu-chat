@@ -1,20 +1,14 @@
-package oauth
+package main
 
 import (
 	"flag"
 	"log"
 
+	"github.com/Sprinter05/osu-chat/callback/oauth"
 	"github.com/Sprinter05/osu-chat/internal"
 )
 
 var configFile string
-
-type Config struct {
-	OAuth       OAuth  `json:"oauth"`
-	TokenURL    string `json:"token_url"`
-	CallbackURL string `json:"callback_url"`
-	Address     string `json:"address"`
-}
 
 func setup() {
 	flag.StringVar(
@@ -26,12 +20,12 @@ func setup() {
 
 func main() {
 	setup()
-	conf := new(Config)
+	conf := new(oauth.Config)
 	err := internal.GetConfig(configFile, conf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Run
-	ServerCallback(*conf)
+	oauth.ServerCallback(*conf)
 }

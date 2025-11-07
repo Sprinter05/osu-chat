@@ -27,6 +27,13 @@ type OAuth struct {
 	TokenSecret string `json:"token_secret"`
 }
 
+type Config struct {
+	OAuth       OAuth  `json:"oauth"`
+	TokenURL    string `json:"token_url"`
+	CallbackURL string `json:"callback_url"`
+	Address     string `json:"address"`
+}
+
 /* STATE */
 
 // Creates a random state string with the port bundled in it

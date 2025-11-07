@@ -27,6 +27,7 @@
             ],
             "program": "${workspaceFolder}/oauth",
             "cwd": "${workspaceFolder}",
+            "console": "externalTerminal"
         }
     ]
 }

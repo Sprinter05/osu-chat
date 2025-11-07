@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Sprinter05/osu-chat/callback/oauth"
 	"github.com/Sprinter05/osu-chat/internal"
-	"github.com/Sprinter05/osu-chat/oauth"
 	"github.com/pkg/browser"
 )
 
@@ -19,11 +19,6 @@ func RetrieveToken(params OAuth) (oauth.Token, error) {
 	port, state, err := oauth.CreateState()
 	if err != nil {
 		return oauth.Token{}, err
-	}
-
-	ret, _ := oauth.GetPortFromState(state)
-	if ret != port {
-		panic("invalid")
 	}
 
 	url := url.Values{}
