@@ -4,6 +4,6 @@
         "token_secret": "verysecrettoken"
     },
     "token_url": "https://osu.ppy.sh/oauth/token",
-    "callback_url": "https://yourservice.for.oauth/authorization",
+    "callback_url": "https://yourservice.for.oauth",
     "address": "0.0.0.0:8000"
 }

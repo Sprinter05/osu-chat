@@ -25,7 +25,7 @@ func requestToken(cl *http.Client, config Config, code string) (Token, error) {
 		"client_secret": config.OAuth.TokenSecret,
 		"code":          code,
 		"grant_type":    "authorization_code",
-		"redirect_uri":  config.CallbackURL,
+		"redirect_uri":  config.CallbackURL + "/authorization",
 	}
 
 	body, err := json.Marshal(values)
