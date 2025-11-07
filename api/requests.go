@@ -2,8 +2,17 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"github.com/Sprinter05/osu-chat/internal"
 )
+
+type OAuth struct {
+	ClientId    int      `json:"client_id"`
+	CallbackURL string   `json:"callback_url"`
+	Scopes      []string `json:"scopes"`
+}
 
 type Token struct {
 	TokenType    string
@@ -11,10 +20,22 @@ type Token struct {
 	RefreshToken string
 }
 
+// Authentication
+
+func setGenericHeaders(hd *http.Header, token Token) {
+	hd.Set("Content-Type", "application/json")
+	hd.Set("Accept", "application/json")
+	hd.Set("Authorization", fmt.Sprintf(
+		"%s %s",
+		token.TokenType,
+		token.AccessToken,
+	))
+}
+
 func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
 	req, err := http.NewRequest(
 		http.MethodGet,
-		OSU_URL+"/chat/channels",
+		OsuApiUrl+"/chat/channels",
 		nil,
 	)
 
@@ -30,7 +51,7 @@ func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, httpErr(res)
+		return nil, internal.HTTPError(res)
 	}
 
 	list := make([]ChatChannel, 0)

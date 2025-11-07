@@ -1,63 +1,41 @@
 package api
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
+
+	"github.com/Sprinter05/osu-chat/internal"
+	"github.com/Sprinter05/osu-chat/oauth"
+	"github.com/pkg/browser"
 )
 
-const OSU_URL string = "https://osu.ppy.sh/api/v2"
+const OsuApiUrl string = "https://osu.ppy.sh/api/v2"
+const OsuOauthUrl string = "https://osu.ppy.sh/oauth/authorize"
 
-type APIToken struct {
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-func RequestToken(cl *http.Client, oauth OAuth) (APIToken, error) {
-	code, err := oauthAuthorize(oauth)
+func RetrieveToken(params OAuth) (oauth.Token, error) {
+	port, state, err := oauth.CreateState()
 	if err != nil {
-		return APIToken{}, err
+		return oauth.Token{}, err
 	}
 
-	values := map[string]string{
-		"client_id":     strconv.FormatInt(int64(oauth.ClientId), 10),
-		"client_secret": oauth.TokenSecret,
-		"code":          code,
-		"grant_type":    "authorization_code",
-		"redirect_uri":  fmt.Sprintf("http://%s/oauth", CALLBACK_OAUTH),
-	}
-	body, err := json.Marshal(values)
-	if err != nil {
-		return APIToken{}, err
-	}
+	url := url.Values{}
+	url.Add("client_id", strconv.FormatInt(int64(params.ClientId), 10))
+	url.Add("state", state)
+	url.Add("response_type", "code")
+	url.Add("redirect_uri", params.CallbackURL)
+	url.Add("scope", strings.Join(params.Scopes, " "))
+	full := url.Encode()
 
-	req, err := http.NewRequest(
-		http.MethodPost,
-		OSU_URL_OAUTH+"/token",
-		bytes.NewBuffer(body),
-	)
+	osuUrl := fmt.Sprintf("%s?%s", OsuOauthUrl, full)
 
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
+	channel := make(chan oauth.Token)
+	go oauth.ClientCallback(state, port, channel)
 
-	res, err := cl.Do(req)
-	if err != nil {
-		return APIToken{}, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return APIToken{}, httpErr(res)
-	}
-
-	var token APIToken
-	err = json.NewDecoder(res.Body).Decode(&token)
-	if err != nil {
-		return APIToken{}, err
-	}
+	browser.OpenURL(osuUrl)
+	token := <-channel
 
 	return token, nil
 }
@@ -65,9 +43,13 @@ func RequestToken(cl *http.Client, oauth OAuth) (APIToken, error) {
 func DeleteToken(cl *http.Client, token Token) error {
 	req, err := http.NewRequest(
 		http.MethodDelete,
-		OSU_URL+"/oauth/tokens/current",
+		OsuApiUrl+"/oauth/tokens/current",
 		nil,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	setGenericHeaders(&req.Header, token)
 
@@ -77,7 +59,7 @@ func DeleteToken(cl *http.Client, token Token) error {
 	}
 
 	if res.StatusCode != http.StatusNoContent {
-		return httpErr(res)
+		return internal.HTTPError(res)
 	}
 
 	return nil

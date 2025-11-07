@@ -1,33 +1,32 @@
 package main
 
 import (
+	"flag"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/Sprinter05/osu-chat/api"
+	"github.com/Sprinter05/osu-chat/internal"
 )
 
-// TODO: move to dedicated OAuth serer (client secret is exposed)
+/* SETUP */
 
-func defaultClient() *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			DisableKeepAlives: false,
-			MaxIdleConns:      5,
-			IdleConnTimeout:   30 * time.Second,
-		},
-		Timeout: time.Minute,
-	}
+var configFile string
+
+func init() {
+	flag.StringVar(
+		&configFile, "config", "config.json",
+		"Configuration file to load, must be in JSON format.",
+	)
 }
 
-func login(client *http.Client, config *Config) (api.Token, error) {
+func login(config *Config) (api.Token, error) {
 	if config.Token != nil {
 		// TODO: refresh token if necessary
 		return configToToken(*config.Token), nil
 	}
 
-	token, err := api.RequestToken(client, config.OAuth)
+	token, err := api.RetrieveToken(config.OAuth)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +42,7 @@ func login(client *http.Client, config *Config) (api.Token, error) {
 		ExpirationDate: expiration,
 	}
 
-	err = saveConfig(*config)
+	err = internal.SaveConfig(configFile, *config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,13 +51,14 @@ func login(client *http.Client, config *Config) (api.Token, error) {
 }
 
 func main() {
-	client := defaultClient()
-	config, err := getConfig()
+	config := new(Config)
+	client := internal.DefaultClient()
+	err := internal.GetConfig(configFile, config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	token, err := login(client, &config)
+	token, err := login(config)
 	if err != nil {
 		log.Fatal(err)
 	}

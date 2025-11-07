@@ -11,6 +11,7 @@ import (
 	mrand "math/rand/v2"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Sprinter05/osu-chat/internal"
 )
@@ -138,14 +139,15 @@ func authorization(client *http.Client, config Config) serverFunc {
 func refreshing(client *http.Client, config Config) serverFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query()
-		if !url.Has("refresh") {
+		if !url.Has("refresh") || !url.Has("scopes") {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		refresh := url.Get("refresh")
+		scopes := strings.Split(url.Get("scopes"), "+")
 
-		token, err := refreshToken(client, config, refresh, config.Scopes)
+		token, err := refreshToken(client, config, refresh, scopes)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return

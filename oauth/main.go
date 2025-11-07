@@ -10,11 +10,10 @@ import (
 var configFile string
 
 type Config struct {
-	OAuth       OAuth    `json:"oauth"`
-	TokenURL    string   `json:"token_url"`
-	CallbackURL string   `json:"callback_url"`
-	Address     string   `json:"address"`
-	Scopes      []string `json:"scopes"`
+	OAuth       OAuth  `json:"oauth"`
+	TokenURL    string `json:"token_url"`
+	CallbackURL string `json:"callback_url"`
+	Address     string `json:"address"`
 }
 
 // Ran at startup
