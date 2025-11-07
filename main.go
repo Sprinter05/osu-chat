@@ -8,10 +8,23 @@ import (
 	"github.com/Sprinter05/osu-chat/api"
 )
 
-func login(client *http.Client, config *Config) error {
+// TODO: move to dedicated OAuth serer (client secret is exposed)
+
+func defaultClient() *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			DisableKeepAlives: false,
+			MaxIdleConns:      5,
+			IdleConnTimeout:   30 * time.Second,
+		},
+		Timeout: time.Minute,
+	}
+}
+
+func login(client *http.Client, config *Config) (api.Token, error) {
 	if config.Token != nil {
 		// TODO: refresh token if necessary
-		return nil
+		return configToToken(*config.Token), nil
 	}
 
 	token, err := api.RequestToken(client, config.OAuth)
@@ -19,40 +32,44 @@ func login(client *http.Client, config *Config) error {
 		log.Fatal(err)
 	}
 
-	config.Token = &token
+	expiration := time.Now().Add(
+		time.Duration(token.ExpiresIn) * time.Second,
+	)
+
+	config.Token = &Token{
+		TokenType:      token.TokenType,
+		AccessToken:    token.AccessToken,
+		RefreshToken:   token.RefreshToken,
+		ExpirationDate: expiration,
+	}
+
 	err = saveConfig(*config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return nil
+	return configToToken(*config.Token), nil
 }
 
 func main() {
+	client := defaultClient()
 	config, err := getConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			DisableKeepAlives: false,
-			MaxIdleConns:      5,
-			IdleConnTimeout:   30 * time.Second,
-		},
-		Timeout: time.Minute,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			print(req, via)
-			return nil
-		},
-	}
-
-	err = login(client, &config)
+	token, err := login(client, &config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = api.DeleteToken(client, *config.Token)
+	list, err := api.GetChannelList(client, token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	print(list)
+
+	err = api.DeleteToken(client, token)
 	if err != nil {
 		log.Fatal(err)
 	}

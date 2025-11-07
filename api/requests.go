@@ -5,6 +5,12 @@ import (
 	"net/http"
 )
 
+type Token struct {
+	TokenType    string
+	AccessToken  string
+	RefreshToken string
+}
+
 func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -23,7 +29,11 @@ func GetChannelList(cl *http.Client, token Token) ([]ChatChannel, error) {
 		return nil, err
 	}
 
-	var list []ChatChannel
+	if res.StatusCode != http.StatusOK {
+		return nil, httpErr(res)
+	}
+
+	list := make([]ChatChannel, 0)
 	err = json.NewDecoder(res.Body).Decode(&list)
 	if err != nil {
 		return nil, err

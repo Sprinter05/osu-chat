@@ -1,8 +1,10 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -10,6 +12,21 @@ import (
 // Errors
 
 func httpErr(res *http.Response) error {
+	msg, _ := io.ReadAll(res.Body)
+	if len(msg) != 0 {
+		m := make(map[string]string)
+		err := json.Unmarshal(msg, &m)
+		if err == nil {
+			v, ok := m["error"]
+			if ok {
+				return fmt.Errorf(
+					"http returned %s: %s",
+					res.Status, v,
+				)
+			}
+		}
+	}
+
 	return errors.New(res.Status)
 }
 
@@ -31,7 +48,8 @@ func setGenericHeaders(hd *http.Header, token Token) {
 	hd.Set("Content-Type", "application/json")
 	hd.Set("Accept", "application/json")
 	hd.Set("Authorization", fmt.Sprintf(
-		"Bearer %s",
+		"%s %s",
+		token.TokenType,
 		token.AccessToken,
 	))
 }

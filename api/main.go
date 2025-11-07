@@ -4,24 +4,23 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 )
 
 const OSU_URL string = "https://osu.ppy.sh/api/v2"
 
-type Token struct {
+type APIToken struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
-func RequestToken(cl *http.Client, oauth OAuth) (Token, error) {
+func RequestToken(cl *http.Client, oauth OAuth) (APIToken, error) {
 	code, err := oauthAuthorize(oauth)
 	if err != nil {
-		return Token{}, err
+		return APIToken{}, err
 	}
 
 	values := map[string]string{
@@ -33,7 +32,7 @@ func RequestToken(cl *http.Client, oauth OAuth) (Token, error) {
 	}
 	body, err := json.Marshal(values)
 	if err != nil {
-		return Token{}, err
+		return APIToken{}, err
 	}
 
 	req, err := http.NewRequest(
@@ -47,17 +46,17 @@ func RequestToken(cl *http.Client, oauth OAuth) (Token, error) {
 
 	res, err := cl.Do(req)
 	if err != nil {
-		return Token{}, err
+		return APIToken{}, err
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return Token{}, httpErr(res)
+		return APIToken{}, httpErr(res)
 	}
 
-	var token Token
+	var token APIToken
 	err = json.NewDecoder(res.Body).Decode(&token)
 	if err != nil {
-		return Token{}, err
+		return APIToken{}, err
 	}
 
 	return token, nil
@@ -66,7 +65,7 @@ func RequestToken(cl *http.Client, oauth OAuth) (Token, error) {
 func DeleteToken(cl *http.Client, token Token) error {
 	req, err := http.NewRequest(
 		http.MethodDelete,
-		OSU_URL_OAUTH+"/tokens/current",
+		OSU_URL+"/oauth/tokens/current",
 		nil,
 	)
 
@@ -77,10 +76,7 @@ func DeleteToken(cl *http.Client, token Token) error {
 		return err
 	}
 
-	s, _ := io.ReadAll(res.Body)
-	print(string(s))
-
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode != http.StatusNoContent {
 		return httpErr(res)
 	}
 
