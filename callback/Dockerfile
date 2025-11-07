@@ -1,5 +1,7 @@
+# Run this image from the parent directory using "-f"
+
 # Using alpine for size optimisation
-FROM golang:alpine
+FROM golang:1.25.3-alpine
 
 # Install necessary packages
 RUN apk add --no-cache make
@@ -7,16 +9,16 @@ RUN apk add --no-cache make
 # Copy the source code and compile
 WORKDIR /src
 COPY . .
-RUN make
+RUN make oauthd
 
 # Setup configuration files
 WORKDIR /config
-RUN cp /src/oauth_example.json ./oauth.json
+RUN cp /src/config/oauth_example.json ./oauth.json
 
 # Copy the app binary and entrypoint, then create necessary folders
 WORKDIR /app
 RUN cp /src/build/oauthd . &&\
-    cp /src/docker/entrypoint.sh . &&\
+    cp /src/callback/docker/entrypoint.sh . &&\
     chmod +x entrypoint.sh
 
 # Forward ports

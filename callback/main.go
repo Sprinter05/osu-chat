@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/Sprinter05/osu-chat/callback/oauth"
 	"github.com/Sprinter05/osu-chat/internal"
@@ -20,6 +21,7 @@ func init() {
 }
 
 func main() {
+	log.SetOutput(os.Stdout)
 	conf := new(oauth.Config)
 	err := internal.GetConfig(configFile, conf)
 	if err != nil {
