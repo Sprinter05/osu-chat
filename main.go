@@ -58,7 +58,7 @@ func login(cl *http.Client, config *Config) (api.Token, error) {
 	// Token alerady exists
 	if config.Token != nil {
 		// Token has expired
-		if time.Now().Before(config.Token.ExpirationDate) {
+		if time.Now().After(config.Token.ExpirationDate) {
 			convert := configToAPIToken(*config.Token)
 
 			// Refresh a new token
