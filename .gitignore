@@ -4,3 +4,6 @@ config/*
 
 # File types
 **/__debug_bin*
+
+# Exceptions
+!config/*_example.json
