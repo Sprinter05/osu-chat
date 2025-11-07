@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/Sprinter05/osu-chat/callback/oauth"
-	"github.com/Sprinter05/osu-chat/internal"
+	"github.com/Sprinter05/osu-chat/internal/conf"
 )
 
 var configFile string
@@ -22,14 +22,14 @@ func init() {
 
 func main() {
 	log.SetOutput(os.Stdout)
-	conf := new(oauth.Config)
-	err := internal.GetConfig(configFile, conf)
+	config := new(oauth.Config)
+	err := conf.GetConfig(configFile, config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Run
-	oauth.ServerCallback(*conf)
+	oauth.ServerCallback(*config)
 
 	fmt.Print("Server terminated!")
 }
