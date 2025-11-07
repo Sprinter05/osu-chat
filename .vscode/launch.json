@@ -25,9 +25,8 @@
                 "--config",
                 "config/oauth.json"
             ],
-            "program": "${workspaceFolder}/oauth",
+            "program": "${workspaceFolder}/callback",
             "cwd": "${workspaceFolder}",
-            "console": "externalTerminal"
         }
     ]
 }

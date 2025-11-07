@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/Sprinter05/osu-chat/callback/oauth"
@@ -28,4 +29,6 @@ func main() {
 
 	// Run
 	oauth.ServerCallback(*conf)
+
+	fmt.Print("Server terminated!")
 }

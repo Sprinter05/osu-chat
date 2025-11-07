@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -42,7 +44,23 @@ func FormatTime(t time.Time) string {
 	return t.Format(TIME_FORMAT)
 }
 
-/* HTTP CLIENTS */
+/* HTTP  */
+
+func CheckPortInUse(port uint16) bool {
+	portStr := strconv.FormatInt(int64(port), 10)
+	address := net.JoinHostPort("localhost", portStr)
+	conn, err := net.DialTimeout("tcp4", address, time.Second)
+	if err != nil {
+		return true
+	}
+
+	if conn == nil {
+		return true
+	}
+
+	conn.Close()
+	return false
+}
 
 func DefaultClient() *http.Client {
 	return &http.Client{
@@ -54,8 +72,6 @@ func DefaultClient() *http.Client {
 		Timeout: time.Minute,
 	}
 }
-
-/* HTTP HEADERS */
 
 func SetContentHeaders(hd *http.Header) {
 	hd.Add("Accept", "application/json")

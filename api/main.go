@@ -15,10 +15,18 @@ import (
 const OsuApiUrl string = "https://osu.ppy.sh/api/v2"
 const OsuOauthUrl string = "https://osu.ppy.sh/oauth/authorize"
 
-func RetrieveToken(params OAuth) (oauth.Token, error) {
-	port, state, err := oauth.CreateState()
-	if err != nil {
-		return oauth.Token{}, err
+func RetrieveToken(params OAuth) (tok oauth.Token, err error) {
+	var port uint16
+	var state string
+
+	available := false
+	for !available {
+		port, state, err = oauth.CreateState()
+		if err != nil {
+			return tok, err
+		}
+
+		available = internal.CheckPortInUse(port)
 	}
 
 	url := url.Values{}

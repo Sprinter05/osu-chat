@@ -70,8 +70,8 @@ func main() {
 	}
 	print(list)
 
-	err = api.DeleteToken(client, token)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err = api.DeleteToken(client, token)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 }

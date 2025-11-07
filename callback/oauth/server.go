@@ -93,15 +93,16 @@ func clientRequest(response TokenResponse) (*http.Request, error) {
 	} else {
 		body, err = json.Marshal(response)
 	}
-
 	if err != nil {
 		return nil, err
 	}
 
+	jsonVal := base64.StdEncoding.EncodeToString(body)
+
 	req, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("http://localhost:%d/token", port),
-		bytes.NewBuffer(body),
+		fmt.Sprintf("http://localhost:%d/token?json=%s", port, jsonVal),
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -188,6 +189,7 @@ func ServerCallback(config Config) {
 		Handler: mux,
 	}
 
+	fmt.Print("Started OAuth Server\n")
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
 		log.Fatalf("OAuth server callback error: %s", err)
@@ -199,9 +201,30 @@ func ServerCallback(config Config) {
 // Ran by the client application
 func ClientCallback(state string, port uint16, send chan<- Token) {
 	mux := http.NewServeMux()
+	srv := &http.Server{
+		Addr:    fmt.Sprintf("localhost:%d", port),
+		Handler: mux,
+	}
+
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: close server according to GUI
+		defer srv.Close()
+
+		url := r.URL.Query()
+		if !url.Has("json") {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		jsonStr := url.Get("json")
+		jsonRaw, err := base64.StdEncoding.DecodeString(jsonStr)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		response := new(TokenResponse)
-		err := json.NewDecoder(r.Response.Body).Decode(response)
+		err = json.NewDecoder(bytes.NewBuffer(jsonRaw)).Decode(response)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -214,13 +237,7 @@ func ClientCallback(state string, port uint16, send chan<- Token) {
 
 		send <- response.Token
 		fmt.Fprint(w, "Token generated! You can now close this window!")
-		w.WriteHeader(http.StatusOK)
 	})
-
-	srv := &http.Server{
-		Addr:    fmt.Sprintf("localhost:%d", port),
-		Handler: mux,
-	}
 
 	err := srv.ListenAndServe()
 	if err != http.ErrServerClosed {
