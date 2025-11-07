@@ -172,21 +172,30 @@ func authorization(client *http.Client, config Config) serverFunc {
 }
 
 // HTTP method for the "/refresh" endpoint. The client app sends a POST request
-// giving the refresh token and the scopes, which will then be used to refresh
-// the token, returning the API response back to the client app
+// giving the refresh token and the scopes separated by spaces which will then
+// be used to refresh the token, returning the API response back to the client app
 func refresh(client *http.Client, config Config) serverFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		url := r.URL.Query()
-		if !url.Has("refresh") || !url.Has("scopes") {
+		values := make(map[string]string)
+		err := json.NewDecoder(r.Body).Decode(&values)
+		if err != nil {
+			logError("refresh", r, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		refresh, ok1 := values["refresh"]
+		scopes, ok2 := values["scopes"]
+
+		if !ok1 || !ok2 {
 			logError("refresh", r, fmt.Errorf("no refresh or scopes provided"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		refresh := url.Get("refresh")
-		scopes := strings.Split(url.Get("scopes"), " ")
+		scopesList := strings.Split(scopes, " ")
 
-		response, err := refreshToken(client, config, refresh, scopes)
+		response, err := refreshToken(client, config, refresh, scopesList)
 		if err != nil {
 			logError("refresh", r, err)
 			w.WriteHeader(http.StatusInternalServerError)
